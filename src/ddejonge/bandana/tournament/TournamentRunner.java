@@ -27,7 +27,7 @@ public class TournamentRunner {
 
 	static final String[] BandanaTutorialBotCommand = {"java", "-jar", "agents/BandanaTutorialBot-0.1.jar", "-log", LOG_FOLDER, "-name", "BandanaTutorialBot", "-fy", FINAL_YEAR};
 
-	static final String[] EagerAllianceBotCommand = {"java", "-jar", "agents/EagerAllianceBot-0.4.1.jar", "-log", LOG_FOLDER, "-name", "EagerAllianceBot", "-fy", FINAL_YEAR};
+	static final String[] EagerAllianceBotCommand = {"java", "-jar", "agents/EagerAllianceBot-0.5.a.jar", "-log", LOG_FOLDER, "-name", "EagerAllianceBot", "-fy", FINAL_YEAR};
 	static final String[] QuietBotCommand = {"java", "-jar", "agents/QuietBot-0.1.2.jar", "-log", LOG_FOLDER, "-name", "QuietBot", "-fy", FINAL_YEAR};
 	static List<Process> players = new ArrayList<>();
 

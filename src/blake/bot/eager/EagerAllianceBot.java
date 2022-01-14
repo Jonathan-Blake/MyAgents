@@ -64,8 +64,13 @@ public class EagerAllianceBot extends ANACNegotiator {
 
 		this.proposeDraw();
 		if (this.alliance.size() > 1) {
-			initPlan();
-			this.proposeDeal(myPlan);
+//			initPlan();
+			this.alliance.forEach(ally -> {
+				if (ally != this.me) {
+					this.proposeDeal(makePeaceDeal(ally));
+				}
+			});
+//			this.proposeDeal(myPlan);
 
 			this.getLogger().logln("Current Alliance " + Arrays.toString(this.alliance.toArray()));
 		}
@@ -84,14 +89,14 @@ public class EagerAllianceBot extends ANACNegotiator {
 	private void initPlan() {
 
 		List<OrderCommitment> orders = new LinkedList<>();
-		bestPlan.getMyOrders().forEach(order -> {
-			if (!(order instanceof HLDOrder)) {
-				orders.add(new OrderCommitment(
-						this.game.getYear(),
-						this.game.getPhase(),
-						order));
-			}
-		});
+//		bestPlan.getMyOrders().forEach(order -> {
+//			if (!(order instanceof HLDOrder)) {
+//				orders.add(new OrderCommitment(
+//						this.game.getYear(),
+//						this.game.getPhase(),
+//						order));
+//			}
+//		});
 		Set<Province> dmzRegions = new HashSet<>();
 		this.alliance.forEach(ally -> {
 			dmzRegions.addAll(ally.getOwnedSCs());
@@ -113,7 +118,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 		myPlan = new BasicDeal(orders, dmzs);
 	}
 
-	private void considerProposals() {
+	private void createProposals() {
 		List<BasicDeal> confirmedDeals = getConfirmedDeals();
 		List<Order> commitedAllies = new LinkedList<>();
 		this.alliance.forEach(ally -> ally.getControlledRegions().forEach(
@@ -125,9 +130,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 		List<Region> uncommitedAllies = new LinkedList<>(alliedRegions);
 		uncommitedAllies.removeAll(commitedAllies.stream().map(Order::getLocation).collect(Collectors.toList()));
 
-		if (bestPlan == null) {
-			initPlan();
-		}
+		this.bestPlan = getTacticalModule().determineBestPlan(this.game, this.me, confirmedDeals, new LinkedList<>(this.alliance));
 
 		if (bestPlan != null) {
 			List<HLDOrder> holdOrders = new LinkedList<>();
@@ -182,8 +185,8 @@ public class EagerAllianceBot extends ANACNegotiator {
 					boolean[] peace = {false};
 					((BasicDeal) proposal.getProposedDeal()).getDemilitarizedZones().forEach(
 							dmz -> {
-								boolean dmzGuarenteesHomes = dmz.getProvinces().containsAll(me.getHomes()) && dmz.getPowers().contains(powerSender);
-								peace[0] = peace[0] || dmzGuarenteesHomes;
+								boolean dmzGuaranteesHomes = dmz.getProvinces().containsAll(me.getHomes()) && dmz.getPowers().contains(powerSender);
+								peace[0] = peace[0] || dmzGuaranteesHomes;
 							});
 					if (peace[0] && !this.alliance.contains(powerSender)) {
 						this.getLogger().logln(String.format("Adding %s to allies list", powerSender.getName()));
@@ -191,20 +194,24 @@ public class EagerAllianceBot extends ANACNegotiator {
 						this.alliance.add(powerSender);
 //						this.myPlan.getDemilitarizedZones().add(new DMZ(this.game.getYear(),this.game.getPhase(), new ArrayList<>(this.alliance), powerSender.getHomes()));
 //						this.myPlan.getDemilitarizedZones().add(new DMZ(this.game.getYear(),this.game.getPhase(), new ArrayList<>(this.alliance), powerSender.getOwnedSCs()));
-						initPlan();
-						this.proposeDeal(myPlan);
+//						initPlan();
+//						this.proposeDeal(myPlan);
+//						this.proposeDeal(makePeaceDeal(powerSender));
 						this.getLogger().logln(String.format("EagerAllianceBot.handleMessage() Added %s to alliance", receivedMessage.getSender()), true);
 					}
 					if (this.alliance.contains(powerSender)) {
-						boolean rejected = rejectIfInconsistent(proposal);
+						boolean rejected = testConsistency(proposal);
 						if (!rejected) {
-							this.getLogger().logln(String.format("Accepting Proposal from %s", powerSender.getName()));
 							this.acceptProposal(proposal.getId());
+							this.getLogger().logln(String.format("Accepting Proposal from %s", powerSender.getName()));
 						} else {
-							this.getLogger().logln(String.format("Proposal from %s ", powerSender.getName()));
+							this.rejectProposal(proposal.getId());
+							this.getLogger().logln(String.format("Did not accept proposal from %s ", powerSender.getName()));
 						}
 					}
 
+				} else {
+					this.getLogger().logln(String.format("Could not process non Diplomacy Proposal."));
 				}
 				this.getLogger().logln(String.format("EagerAllianceBot.handleMessage() Processed Proposal from %s", receivedMessage.getSender()), true);
 				break;
@@ -215,7 +222,6 @@ public class EagerAllianceBot extends ANACNegotiator {
 			}
 			case ("REJECT"): {
 				this.getLogger().logln(String.format("EagerAllianceBot.handleMessage() Received rejection from %s", receivedMessage.getSender()), true);
-
 				break;
 			}
 			default:
@@ -223,28 +229,14 @@ public class EagerAllianceBot extends ANACNegotiator {
 		}
 	}
 
-	private boolean rejectIfInconsistent(DiplomacyProposal acceptance) {
-		ArrayList<BasicDeal> deals = new ArrayList<>(this.getConfirmedDeals().size() + 1);
-		deals.addAll(this.getConfirmedDeals());
-		deals.add((BasicDeal) acceptance.getProposedDeal());
-		if (Utilities.testConsistency(this.game, deals) != null) {
-			this.rejectProposal(acceptance.getId());
-			return false;
-		} else {
-			return true;
-		}
-	}
-
-
-	private boolean dateIsThisTurn(OrderCommitment order) {
-		return this.game.getPhase() == order.getPhase() && this.game.getYear() == order.getYear();
-	}
-
 
 	@Override
 	public void receivedOrder(Order arg0) {
-		// TODO Auto-generated method stub
-
+		if (arg0 instanceof MTOOrder) {
+			if (this.alliance.contains(arg0.getPower()) && concatLists(this.me.getOwnedSCs(), this.me.getHomes()).contains(((MTOOrder) arg0).getDestination().getProvince())) {
+				this.getLogger().logln(String.format("Ally %s is attacking me in %s", arg0.getPower(), ((MTOOrder) arg0).getDestination()), true);
+			}
+		}
 	}
 
 	@Override
@@ -262,20 +254,50 @@ public class EagerAllianceBot extends ANACNegotiator {
 		this.proposeDeal(nonAggressionProposal);
 	}
 
+	private BasicDeal makePeaceDeal(Power ally) {
+		this.getLogger().logln(String.format("Proposing peace deal with %s", ally));
+		ArrayList<DMZ> DMZs = new ArrayList<>(2);
+//		DMZs.add(0, new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(this.me), concatLists(ally.getOwnedSCs(), ally.getHomes())));
+//		DMZs.add(0, new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(ally), concatLists(this.me.getOwnedSCs(), this.me.getHomes())));
+		DMZs.add(0, new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(this.me), ally.getControlledRegions().stream().map(Region::getProvince).collect(Collectors.toList())));
+		DMZs.add(0, new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(ally), this.me.getControlledRegions().stream().map(Region::getProvince).collect(Collectors.toList())));
+		return new BasicDeal(Collections.emptyList(), DMZs);
+	}
 
-	@SafeVarargs
-	private final <T> List<T> createFilteredList(Collection<T> collection, Collection<T>... itemsToRemove) {
-		Collection<T> concatList = new LinkedList<>();
-		for (Collection<T> each : itemsToRemove) {
-			concatList.addAll(each);
+	private boolean testConsistency(DiplomacyProposal acceptance) {
+		ArrayList<BasicDeal> deals = new ArrayList<>(this.getConfirmedDeals().size() + 1);
+		deals.addAll(this.getConfirmedDeals());
+		deals.add((BasicDeal) acceptance.getProposedDeal());
+		String consistencyReport = Utilities.testConsistency(this.game, deals);
+		if (consistencyReport == null) {
+			return true;
+		} else {
+			this.getLogger().logln(String.format("Deal is inconsistent : %s", consistencyReport), true);
+			return false;
 		}
-		return createFilteredList(collection, concatList);
 	}
 
 
-	private final <T> List<T> createFilteredList(Collection<T> collection, Collection<T> itemsToRemove) {
+	private boolean dateIsThisTurn(OrderCommitment order) {
+		return this.game.getPhase() == order.getPhase() && this.game.getYear() == order.getYear();
+	}
+
+	@SafeVarargs
+	private final <T> List<T> createFilteredList(Collection<T> collection, Collection<T>... itemsToRemove) {
+		return createFilteredList(collection, concatLists(itemsToRemove));
+	}
+
+
+	private <T> List<T> createFilteredList(Collection<T> collection, Collection<T> itemsToRemove) {
 		LinkedList<T> ret = new LinkedList<>(collection);
 		ret.removeAll(itemsToRemove);
+		return ret;
+	}
+
+	@SafeVarargs
+	private final <T> List<T> concatLists(Collection<T>... lists) {
+		List<T> ret = new LinkedList<>();
+		for (Collection<T> each : lists) ret.addAll(each);
 		return ret;
 	}
 }
