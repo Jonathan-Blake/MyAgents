@@ -60,6 +60,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 
 	@Override
 	public void negotiate(long negotiationDeadline) {
+		this.alliance = new HashSet<>(createFilteredList(this.alliance, this.game.getNonDeadPowers()));
 		bestPlan = this.getTacticalModule().determineBestPlan(this.game, this.me, this.getConfirmedDeals(), new LinkedList<>(this.alliance));
 
 		this.proposeDraw();
@@ -80,6 +81,10 @@ public class EagerAllianceBot extends ANACNegotiator {
 //            	this.getLogger().log("Handling messages");
 				handleMessage();
 			} else {
+				try {
+					Thread.sleep(250L);
+				} catch (InterruptedException var11) {
+				}
 //            	this.getLogger().log("Attempting to find new proposals");
 //            	considerProposals();
 			}
@@ -123,7 +128,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 		List<Order> commitedAllies = new LinkedList<>();
 		this.alliance.forEach(ally -> ally.getControlledRegions().forEach(
 				region -> confirmedDeals.forEach(deal -> deal.getOrderCommitments().stream()
-						.filter(this::dateIsThisTurn).forEach(
+						.filter(order -> this.dateIsThisTurn(new DatedObject(order))).forEach(
 								order -> commitedAllies.add(order.getOrder())))));
 		List<Region> alliedRegions = new LinkedList<>();
 		this.alliance.forEach(ally -> alliedRegions.addAll(ally.getControlledRegions()));
@@ -201,7 +206,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 					}
 					if (this.alliance.contains(powerSender)) {
 						boolean rejected = testConsistency(proposal);
-						if (!rejected) {
+						if (!rejected && this.proposalIsThisTurn(proposal)) {
 							this.acceptProposal(proposal.getId());
 							this.getLogger().logln(String.format("Accepting Proposal from %s", powerSender.getName()));
 						} else {
@@ -228,7 +233,6 @@ public class EagerAllianceBot extends ANACNegotiator {
 				this.getLogger().logln(String.format("EagerAllianceBot Recieved Message of unknown Type: %s", receivedMessage.getPerformative()), true);
 		}
 	}
-
 
 	@Override
 	public void receivedOrder(Order arg0) {
@@ -277,9 +281,20 @@ public class EagerAllianceBot extends ANACNegotiator {
 		}
 	}
 
+	private boolean proposalIsThisTurn(DiplomacyProposal proposal) {
+		boolean validOrders = ((BasicDeal) proposal.getProposedDeal())
+				.getOrderCommitments().stream().map(DatedObject::new)
+				.allMatch(this::dateIsThisTurn);
+		if (!validOrders) {
+			return false;
+		}
+		return ((BasicDeal) proposal.getProposedDeal())
+				.getDemilitarizedZones().stream().map(DatedObject::new)
+				.allMatch(this::dateIsThisTurn);
+	}
 
-	private boolean dateIsThisTurn(OrderCommitment order) {
-		return this.game.getPhase() == order.getPhase() && this.game.getYear() == order.getYear();
+	private boolean dateIsThisTurn(DatedObject date) {
+		return this.game.getPhase() == date.getPhase() && this.game.getYear() == date.getYear();
 	}
 
 	@SafeVarargs
