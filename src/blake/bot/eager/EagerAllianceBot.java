@@ -6,46 +6,37 @@
 package blake.bot.eager;
 
 import ddejonge.bandana.anac.ANACNegotiator;
+import ddejonge.bandana.dbraneTactics.DBraneTactics;
+import ddejonge.bandana.dbraneTactics.Plan;
 import ddejonge.bandana.negoProtocol.BasicDeal;
 import ddejonge.bandana.negoProtocol.DMZ;
 import ddejonge.bandana.negoProtocol.DiplomacyProposal;
+import ddejonge.bandana.negoProtocol.OrderCommitment;
 import ddejonge.bandana.tools.Utilities;
 import ddejonge.negoServer.Message;
 import es.csic.iiia.fabregues.dip.board.Power;
+import es.csic.iiia.fabregues.dip.orders.HLDOrder;
 import es.csic.iiia.fabregues.dip.orders.Order;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Vector;
+import java.util.stream.Collectors;
 
 public class EagerAllianceBot extends ANACNegotiator {
-	private final Vector<Power> mCoalition = new Vector<>();
-	boolean mIsFirstTurn = true;
-
-	public EagerAllianceBot(String[] args) {
-		super(args);
-	}
+	private final DBraneTactics dBraneTactics = this.getTacticalModule();
+	private final List<Power> mCoalition = new ArrayList<>();
+	private boolean mIsFirstTurn = true;
+	private Plan myPlan;
+	private List<OrderCommitment> preferredOrders;
 
 	public static void main(String[] args) {
 		EagerAllianceBot myPlayer = new EagerAllianceBot(args);
 		myPlayer.run();
 	}
 
-	public void addToCoallition(Power power) {
-		boolean isAllyFounded = false;
-
-		for (Power ally : this.mCoalition) {
-			if (ally == power) {
-				isAllyFounded = true;
-				break;
-			}
-		}
-
-		if (!isAllyFounded) {
-			this.mCoalition.add(power);
-		}
-
+	public EagerAllianceBot(String[] args) {
+		super(args);
 	}
 
 	public void start() {
@@ -54,24 +45,12 @@ public class EagerAllianceBot extends ANACNegotiator {
 
 	public void negotiate(long negotiationDeadline) {
 		boolean startOfThisNegotiation = true;
+		int loopsSinceMessage = 0;
+		this.evaluatePlan();
 
 		while (System.currentTimeMillis() < negotiationDeadline) {
-			if (!this.hasMessage()) {
-				if (startOfThisNegotiation) {
-					List<BasicDeal> dealsToOffer = this.getDealsToOffer();
-					for (BasicDeal deal : dealsToOffer) {
-						this.proposeDeal(deal);
-					}
-				}
-
-				startOfThisNegotiation = false;
-
-				try {
-					Thread.sleep(250L);
-				} catch (InterruptedException ignored) {
-					Thread.currentThread().interrupt();
-				}
-			} else {
+			if (this.hasMessage()) {
+				loopsSinceMessage = 0;
 				Message receivedMessage = this.removeMessageFromQueue();
 				this.getLogger().logln("got message " + receivedMessage.getContent(), true);
 				switch (receivedMessage.getPerformative()) {
@@ -90,10 +69,53 @@ public class EagerAllianceBot extends ANACNegotiator {
 					default:
 						this.getLogger().logln("CoalitionBot.negotiate() could not recognise Performative of: " + receivedMessage.getPerformative());
 				}
+			} else {
+				if (startOfThisNegotiation) {
+					this.getDealsToOffer().forEach(this::proposeDeal);
+					startOfThisNegotiation = false;
+				}
+				if (10 < loopsSinceMessage++) {
+					break;
+				} else {
+					sleep();
+				}
 			}
 		}
 
 		this.mIsFirstTurn = false;
+	}
+
+	private void sleep() {
+		try {
+			Thread.sleep(100L);
+		} catch (InterruptedException ignored) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	public void receivedOrder(Order arg0) {
+		/*
+			Required by inheritance.
+		 */
+	}
+
+	private void evaluatePlan() {
+		this.myPlan = dBraneTactics.determineBestPlan(this.game, this.me, this.getConfirmedDeals(), this.mCoalition);
+		this.preferredOrders = null;
+	}
+
+	private List<OrderCommitment> getPreferredOrders() {
+		if (this.preferredOrders == null) {
+			if (this.myPlan == null) {
+				this.preferredOrders = Collections.emptyList();
+			} else {
+				this.preferredOrders = this.myPlan
+						.getMyOrders().stream().filter(order -> !(order instanceof HLDOrder))
+						.map(order -> new OrderCommitment(this.game.getYear(), this.game.getPhase(), order))
+						.collect(Collectors.toList());
+			}
+		}
+		return this.preferredOrders;
 	}
 
 	private void handleProposedMessage(Message receivedMessage) {
@@ -135,7 +157,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 			List<String> participants = receivedProposal.getParticipants();
 
 			for (String powerName : participants) {
-				this.addToCoallition(this.game.getPower(powerName));
+				this.addToCoalition(this.game.getPower(powerName));
 			}
 		}
 	}
@@ -147,12 +169,6 @@ public class EagerAllianceBot extends ANACNegotiator {
 	}
 
 	private List<Power> getAliveAllies() {
-//		ArrayList<Power> aliveAllies = new ArrayList<>();
-//		for (Power ally : this.mCoalition) {
-//			if (this.getNegotiatingPowers().contains(ally) && !ally.equals(this.me)) {
-//				aliveAllies.add(ally);
-//			}
-//		}
 		this.mCoalition.retainAll(game.getNonDeadPowers());
 		this.mCoalition.remove(this.me);
 
@@ -194,7 +210,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 							this.me
 					),
 					ally.getOwnedSCs()));
-			dealsToOffer.add(new BasicDeal(Collections.emptyList(), demilitarizedZones));
+			dealsToOffer.add(new BasicDeal(getPreferredOrders(), demilitarizedZones));
 		}
 		return dealsToOffer;
 	}
@@ -204,13 +220,12 @@ public class EagerAllianceBot extends ANACNegotiator {
 		demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(power), this.me.getOwnedSCs()));
 
 		demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(this.me), power.getOwnedSCs()));
-		return new BasicDeal(Collections.emptyList(), demilitarizedZones);
+		return new BasicDeal(getPreferredOrders(), demilitarizedZones);
 	}
 
-
-	public void receivedOrder(Order arg0) {
-		/*
-			Required by inheritance.
-		 */
+	public void addToCoalition(Power power) {
+		if (!this.mCoalition.contains(power)) {
+			this.mCoalition.add(power);
+		}
 	}
 }
