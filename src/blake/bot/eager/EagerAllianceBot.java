@@ -146,16 +146,17 @@ public class EagerAllianceBot extends ANACNegotiator {
 		this.getLogger().logln("CoallitionBot.negotiate() Received acceptance from " + receivedMessage.getSender() + ": " + receivedProposal, true);
 	}
 
-	private ArrayList<Power> getAliveAllies() {
-		ArrayList<Power> aliveAllies = new ArrayList<>();
+	private List<Power> getAliveAllies() {
+//		ArrayList<Power> aliveAllies = new ArrayList<>();
+//		for (Power ally : this.mCoalition) {
+//			if (this.getNegotiatingPowers().contains(ally) && !ally.equals(this.me)) {
+//				aliveAllies.add(ally);
+//			}
+//		}
+		this.mCoalition.retainAll(game.getNonDeadPowers());
+		this.mCoalition.remove(this.me);
 
-		for (Power ally : this.mCoalition) {
-			if (this.getNegotiatingPowers().contains(ally) && !ally.equals(this.me)) {
-				aliveAllies.add(ally);
-			}
-		}
-
-		return aliveAllies;
+		return this.mCoalition;
 	}
 
 	private List<BasicDeal> getDealsToOffer() {
@@ -168,50 +169,44 @@ public class EagerAllianceBot extends ANACNegotiator {
 		return dealsToOffer;
 	}
 
-	private List<BasicDeal> getCoalitionPeaceOffers() {
-		BasicDeal deal;
-		ArrayList<Power> relevantPowers;
-		ArrayList<DMZ> demilitarizedZones;
-		ArrayList<Power> aliveAllies = this.getAliveAllies();
-
-		List<BasicDeal> dealsToOffer = new ArrayList<>();
-		for (int aliveAllyIndex = 0; aliveAllyIndex < aliveAllies.size(); ++aliveAllyIndex) {
-			relevantPowers = new ArrayList<>();
-			relevantPowers.add(this.me);
-
-			for (int i = 0; i < aliveAllies.size(); ++i) {
-				if (i != aliveAllyIndex) {
-					relevantPowers.add(aliveAllies.get(i));
-				}
-			}
-
-			demilitarizedZones = new ArrayList<>();
-			demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), relevantPowers, (aliveAllies.get(aliveAllyIndex)).getOwnedSCs()));
-			deal = new BasicDeal(Collections.emptyList(), demilitarizedZones);
-			dealsToOffer.add(deal);
-		}
-		return dealsToOffer;
-	}
-
 	private List<BasicDeal> getFirstTurnOffers() {
-		BasicDeal deal;
-		List<Power> relevantPowers;
-		List<DMZ> demilitarizedZones;
 		List<BasicDeal> dealsToOffer = new ArrayList<>();
 		for (Power power : this.game.getPowers()) {
 			if (power != this.me) {
-				relevantPowers = Collections.singletonList(this.me);
-				List<Power> oneAllyVector = Collections.singletonList(power);
-				demilitarizedZones = new ArrayList<>();
-				demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), oneAllyVector, this.me.getOwnedSCs()));
-
-				demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), relevantPowers, power.getOwnedSCs()));
-				deal = new BasicDeal(Collections.emptyList(), demilitarizedZones);
-				dealsToOffer.add(deal);
+				dealsToOffer.add(generatePeaceDeal(power));
 			}
 		}
 		return dealsToOffer;
 	}
+
+	private List<BasicDeal> getCoalitionPeaceOffers() {
+		List<DMZ> demilitarizedZones;
+		List<Power> aliveAllies = this.getAliveAllies();
+
+		List<BasicDeal> dealsToOffer = new ArrayList<>();
+		for (Power ally : aliveAllies) {
+			demilitarizedZones = new ArrayList<>();
+			demilitarizedZones.add(new DMZ(
+					this.game.getYear(),
+					this.game.getPhase(),
+					Utility.Lists.append(
+							Utility.Lists.createFilteredList(aliveAllies, ally),
+							this.me
+					),
+					ally.getOwnedSCs()));
+			dealsToOffer.add(new BasicDeal(Collections.emptyList(), demilitarizedZones));
+		}
+		return dealsToOffer;
+	}
+
+	private BasicDeal generatePeaceDeal(Power power) {
+		List<DMZ> demilitarizedZones = new ArrayList<>();
+		demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(power), this.me.getOwnedSCs()));
+
+		demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(this.me), power.getOwnedSCs()));
+		return new BasicDeal(Collections.emptyList(), demilitarizedZones);
+	}
+
 
 	public void receivedOrder(Order arg0) {
 		/*
