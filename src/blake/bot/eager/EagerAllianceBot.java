@@ -18,25 +18,29 @@ import es.csic.iiia.fabregues.dip.board.Power;
 import es.csic.iiia.fabregues.dip.orders.HLDOrder;
 import es.csic.iiia.fabregues.dip.orders.Order;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 public class EagerAllianceBot extends ANACNegotiator {
 	private final DBraneTactics dBraneTactics = this.getTacticalModule();
+	private final Random random = SecureRandom.getInstanceStrong();
 	private final List<Power> mCoalition = new ArrayList<>();
 	private boolean mIsFirstTurn = true;
 	private Plan myPlan;
 	private List<OrderCommitment> preferredOrders;
 
-	public static void main(String[] args) {
-		EagerAllianceBot myPlayer = new EagerAllianceBot(args);
-		myPlayer.run();
+	public EagerAllianceBot(String[] args) throws NoSuchAlgorithmException {
+		super(args);
 	}
 
-	public EagerAllianceBot(String[] args) {
-		super(args);
+	public static void main(String[] args) throws NoSuchAlgorithmException {
+		EagerAllianceBot myPlayer = new EagerAllianceBot(args);
+		myPlayer.run();
 	}
 
 	public void start() {
@@ -47,6 +51,8 @@ public class EagerAllianceBot extends ANACNegotiator {
 		boolean startOfThisNegotiation = true;
 		int loopsSinceMessage = 0;
 		this.evaluatePlan();
+		this.sleep(Integer.toUnsignedLong(this.random.nextInt(100))); // Used to desynch sending initial proposal so that other
+		// can reevaluate their plans before proposing.
 
 		while (System.currentTimeMillis() < negotiationDeadline) {
 			if (this.hasMessage()) {
@@ -77,7 +83,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 				if (10 < loopsSinceMessage++) {
 					break;
 				} else {
-					sleep();
+					sleep(100L);
 				}
 			}
 		}
@@ -85,9 +91,9 @@ public class EagerAllianceBot extends ANACNegotiator {
 		this.mIsFirstTurn = false;
 	}
 
-	private void sleep() {
+	private void sleep(long duration) {
 		try {
-			Thread.sleep(100L);
+			Thread.sleep(duration);
 		} catch (InterruptedException ignored) {
 			Thread.currentThread().interrupt();
 		}
@@ -210,7 +216,8 @@ public class EagerAllianceBot extends ANACNegotiator {
 							this.me
 					),
 					ally.getOwnedSCs()));
-			dealsToOffer.add(new BasicDeal(getPreferredOrders(), demilitarizedZones));
+			final List<OrderCommitment> orderCommitments = getPreferredOrders();//Collections.emptyList();//
+			dealsToOffer.add(new BasicDeal(orderCommitments, demilitarizedZones));
 		}
 		return dealsToOffer;
 	}
@@ -220,7 +227,9 @@ public class EagerAllianceBot extends ANACNegotiator {
 		demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(power), this.me.getOwnedSCs()));
 
 		demilitarizedZones.add(new DMZ(this.game.getYear(), this.game.getPhase(), Collections.singletonList(this.me), power.getOwnedSCs()));
-		return new BasicDeal(getPreferredOrders(), demilitarizedZones);
+
+		final List<OrderCommitment> orderCommitments = getPreferredOrders();//Collections.emptyList();//
+		return new BasicDeal(orderCommitments, demilitarizedZones);
 	}
 
 	public void addToCoalition(Power power) {

@@ -17,23 +17,23 @@ public class TournamentRunner {
 	private static final String FINAL_YEAR = "1905";
 	//Command lines to start the various agents provided with the Bandana framework.
 	// Add your own line here to run your own bot.
-	static final String[] randomNegotiatorCommand = {"java", "-jar", "agents/RandomNegotiator.jar", "-log", LOG_FOLDER, "-name", "RandomNegotiator", "-fy", FINAL_YEAR};
-	static final String[] randomCommand = {"java", "-jar", "agents/RandomBot-0.2.jar", "-log", LOG_FOLDER, "-name", "Random", "-fy", FINAL_YEAR};
-	static final String[] dumbBot_1_4_Command = {"java", "-jar", "agents/DumbBot-1.4.jar", "-log", LOG_FOLDER, "-name", "DumbBot", "-fy", FINAL_YEAR};
-	static final String[] dbrane_1_1_Command = {"java", "-jar", "agents/D-Brane-1.1.jar", "-log", LOG_FOLDER, "-name", "D-Brane", "-fy", FINAL_YEAR};
-	static final String[] dbraneExampleBotCommand = {"java", "-jar", "agents/D-BraneExampleBot.jar", "-log", LOG_FOLDER, "-name", "DBraneExampleBot", "-fy", FINAL_YEAR};
+	static final CommandArgs randomNegotiatorCommand = new CommandArgs("agents/RandomNegotiator.jar", LOG_FOLDER, "RandomNegotiator", FINAL_YEAR);
+	static final CommandArgs randomCommand = new CommandArgs("agents/RandomBot-0.2.jar", LOG_FOLDER, "Random", FINAL_YEAR);
+	static final CommandArgs dumbBot_1_4_Command = new CommandArgs("agents/DumbBot-1.4.jar", LOG_FOLDER, "DumbBot", FINAL_YEAR);
+	static final CommandArgs dbrane_1_1_Command = new CommandArgs("agents/D-Brane-1.1.jar", LOG_FOLDER, "D-Brane", FINAL_YEAR);
+	static final CommandArgs dbraneExampleBotCommand = new CommandArgs("agents/D-BraneExampleBot.jar", LOG_FOLDER, "DBraneExampleBot", FINAL_YEAR);
 
-	static final String[] anacExampleBotCommand = {"java", "-jar", "agents/AnacExampleNegotiator.jar", "-log", LOG_FOLDER, "-name", "AnacExampleNegotiator", "-fy", FINAL_YEAR};
+	static final CommandArgs anacExampleBotCommand = new CommandArgs("agents/AnacExampleNegotiator.jar", LOG_FOLDER, "AnacExampleNegotiator", FINAL_YEAR);
 
-	static final String[] BandanaTutorialBotCommand = {"java", "-jar", "agents/BandanaTutorialBot-0.1.jar", "-log", LOG_FOLDER, "-name", "BandanaTutorialBot", "-fy", FINAL_YEAR};
+	static final CommandArgs BandanaTutorialBotCommand = new CommandArgs("agents/BandanaTutorialBot-0.1.jar", LOG_FOLDER, "BandanaTutorialBot", FINAL_YEAR);
 
-	static final String[] EagerAllianceBotCommand = {"java", "-jar", "agents/EagerAllianceBot-0.5.a.jar", "-log", LOG_FOLDER, "-name", "EagerAllianceBot", "-fy", FINAL_YEAR};
-	static final String[] QuietBotCommand = {"java", "-jar", "agents/QuietBot-0.1.2.jar", "-log", LOG_FOLDER, "-name", "QuietBot", "-fy", FINAL_YEAR};
+	static final CommandArgs EagerAllianceBotCommand = new CommandArgs("agents/EagerAllianceBot-0.6.1.jar", LOG_FOLDER, "EagerAllianceBot", FINAL_YEAR);
+	static final CommandArgs QuietBotCommand = new CommandArgs("agents/QuietBot-0.1.2.jar", LOG_FOLDER, "QuietBot", FINAL_YEAR);
 	static List<Process> players = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException {
 
-		int numberOfGames = 50;                //The number of games this tournament consists of.
+		int numberOfGames = 5;                //The number of games this tournament consists of.
 
 		int deadlineForMovePhases = 60;    //60 seconds for each SPR and FAL phases
 		int deadlineForRetreatPhases = 30;  //30 seconds for each SUM and AUT phases
@@ -98,9 +98,10 @@ public class TournamentRunner {
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Tutorial 1", BandanaTutorialBotCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Tutorial 2", BandanaTutorialBotCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Tutorial 3", BandanaTutorialBotCommand);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 1", dbrane_1_1_Command);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 2", dbrane_1_1_Command);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 3", dbrane_1_1_Command);
+			final String[] DBraneCommand = dbrane_1_1_Command.toStringArray();
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 1", DBraneCommand);
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 2", DBraneCommand);
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 3", DBraneCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-Brane 4", dbrane_1_1_Command);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-BraneExampleBot 1", dbraneExampleBotCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "D-BraneExampleBot 2", dbraneExampleBotCommand);
@@ -114,10 +115,11 @@ public class TournamentRunner {
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "DumbBot 8", dumbBot_1_4_Command);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "DumbBot 5", dumbBot_1_4_Command);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "DumbBot 6", dumbBot_1_4_Command);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 1", EagerAllianceBotCommand);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 2", EagerAllianceBotCommand);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 3", EagerAllianceBotCommand);
-			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 4", EagerAllianceBotCommand);
+			final String[] eagerAllianceCommand = EagerAllianceBotCommand.toStringArray();
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 1", eagerAllianceCommand);
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 2", eagerAllianceCommand);
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 3", eagerAllianceCommand);
+			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Eager Alliance Bot 4", eagerAllianceCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Quiet Bot 1", QuietBotCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Quiet Bot 2", QuietBotCommand);
 //			createPlayer(finalYear, tournamentLogFolderPath, gameNumber, "Quiet Bot 3", QuietBotCommand);
@@ -131,19 +133,20 @@ public class TournamentRunner {
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
 				}
 
 				if (tournamentObserver.playerFailed()) {
-					// One or more players did not send its orders in in time.
+					// One or more players did not send its orders in time.
 					System.out.println("Players Failed to respond : " + tournamentObserver.getCCDedPlayers());
 				}
 			}
 
 			//Kill the player processes.
 			// (if everything is implemented okay this isn't necessary because the players should kill themselves. 
-			// But just to be sure..)
-			for (Process playerProces : players) {
-				playerProces.destroy();
+			// But just to be sure...)
+			for (Process playerProcess : players) {
+				playerProcess.destroy();
 			}
 		}
 
