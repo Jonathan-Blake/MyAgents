@@ -67,7 +67,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 						handleAcceptedMessage(receivedMessage);
 						break;
 					default:
-						this.getLogger().logln("CoalitionBot.negotiate() could not recognise Performative of: " + receivedMessage.getPerformative());
+						this.getLogger().logln("EagerAllianceBot.negotiate() could not recognise Performative of: " + receivedMessage.getPerformative());
 				}
 			} else {
 				if (startOfThisNegotiation) {
@@ -146,13 +146,13 @@ public class EagerAllianceBot extends ANACNegotiator {
 	private void handleRejectedMessage(Message receivedMessage) {
 		DiplomacyProposal receivedProposal;
 		receivedProposal = (DiplomacyProposal) receivedMessage.getContent();
-		this.getLogger().logln("CoalitionBot.negotiate() Received rejection from " + receivedMessage.getSender() + ": " + receivedProposal, true);
+		this.getLogger().logln("EagerAllianceBot.negotiate() Received rejection from " + receivedMessage.getSender() + ": " + receivedProposal, true);
 	}
 
 	private void handleConfirmationMessage(Message receivedMessage) {
 		DiplomacyProposal receivedProposal;
 		receivedProposal = (DiplomacyProposal) receivedMessage.getContent();
-		this.getLogger().logln("CoalitionBot.negotiate() Received confirmed from " + receivedMessage.getSender() + ": " + receivedProposal, true);
+		this.getLogger().logln("EagerAllianceBot.negotiate() Received confirmed from " + receivedMessage.getSender() + ": " + receivedProposal, true);
 		if (this.mIsFirstTurn) {
 			List<String> participants = receivedProposal.getParticipants();
 
@@ -165,7 +165,7 @@ public class EagerAllianceBot extends ANACNegotiator {
 	private void handleAcceptedMessage(Message receivedMessage) {
 		DiplomacyProposal receivedProposal;
 		receivedProposal = (DiplomacyProposal) receivedMessage.getContent();
-		this.getLogger().logln("CoallitionBot.negotiate() Received acceptance from " + receivedMessage.getSender() + ": " + receivedProposal, true);
+		this.getLogger().logln("EagerAllianceBot.negotiate() Received acceptance from " + receivedMessage.getSender() + ": " + receivedProposal, true);
 	}
 
 	private List<Power> getAliveAllies() {
